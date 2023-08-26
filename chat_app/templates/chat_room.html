@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat Room</title>
+    <style>
+        body {
+            background-color: #313866;
+            color: #974EC3;
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            padding: 50px;
+        }
+
+        .container {
+            margin-bottom: 100px;
+        }
+
+        h1 {
+            font-size: 50px;
+            font-family: cursive;
+
+        }
+
+        label {
+            font-size: 30px;
+            font-family: cursive;
+            margin-bottom: 25px;
+        }
+
+        input {
+            font-size: 25px;
+            font-family: cursive;
+            width: 200px;
+            height: 30px;
+        }
+
+        input {
+            background: transparent;
+            border-radius: 1rem;
+        }
+
+        input:focus {
+            background-color: #FE7BE5;
+        }
+
+        #chat-message-submit {
+            color: #974EC3;
+            font-size: 25px;
+            width: 100px;
+            height: 40px;
+            border-radius: 10px;
+            background-color: #313866;
+            border: 2px solid #974EC3;
+        }
+
+        #chat-message-submit:hover {
+            background-color: #974EC3;
+            color: #313866;
+        }
+
+        #messages {
+            font-size: 20px;
+            font-family: cursive;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Room Name : {{room_name}}</h1>
+        <label for="messages" style="margin-bottom: 100px;">Username : {{username}}</label>
+    </div>
+
+    <div id="messages">{%for m in messages %}<b>{{m.username}}</b>: {{m.message}}<br />{%endfor%}</div>
+    {{room_name |json_script:"json-roomname"}}
+    {{username |json_script:"json-username"}}
+    <label for="message_input">Message</label>
+    <input type="text" name="message" id="message_input" />
+    <br />
+    <br>
+    <button id="chat-message-submit">Send</button>
+
+
+
+    <script type='text/javascript'>
+        const roomName = JSON.parse(document.getElementById('json-roomname').textContent);
+        const userName = JSON.parse(document.getElementById('json-username').textContent);
+
+        const ws = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/'
+            + roomName
+            + '/'
+        );
+        ws.onopen = function (event) {
+            console.log('WebSocket connection opened.');
+        };
+        ws.onmessage = function (e) {
+            console.log("onmessage")
+            let data = JSON.parse(e.data)
+            if (data.message) {
+                console.log('Data', data.message)
+                let messages = document.getElementById('messages')
+                messages.innerHTML += ('<b>' + data.username + '</b> : ' + data.message + '<br>')
+            } else
+                alert("Wrong typed");
+        };
+        ws.onerror = function (event) {
+            console.error('WebSocket error:', event);
+        };
+
+        ws.onclose = function (e) {
+            console.error('Chat socket closed unexpectedly')
+        };
+        document.querySelector("#chat-message-submit").onclick = function (e) {
+            let message_input = document.querySelector("#message_input")
+            let message = message_input.value
+            ws.send(JSON.stringify({
+                'message': message,
+                'username': userName,
+                'room': roomName,
+            }));
+            console.log(message)
+            message_input.value = '';
+        };
+    </script>
+</body>
+
+</html>
